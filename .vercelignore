@@ -27,5 +27,4 @@ _.log
 .vscode/
 .idea/
 .husky/
-
 /api

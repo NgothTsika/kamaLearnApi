@@ -1,15 +1,9 @@
 {
   "buildCommand": "yarn generate && yarn build",
   "outputDirectory": "dist",
-  "functions": {
-    "dist/src/index.js": {
-      "maxDuration": 60
-    }
-  },
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "dist/src/index.js"
-    }
-  ]
+  "framework": "express",
+  "nodeVersion": "20.11.1",
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
