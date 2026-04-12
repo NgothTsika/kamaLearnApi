@@ -15,26 +15,7 @@ node_modules/
 
 \*.md
 .DS_Store
-prisma/seed.tss - only deploy compiled JavaScript
-
-src/
-api/
-prisma/
-
-# Ignore development and build artifacts
-
-node_modules/
-.git/
-.gitignore
-.env.local
-.env.\*.local
-
-# Ignore documentation and config files
-
-_.md
-.DS_Store
 prisma/seed.ts
-prisma/_.md
 
 # Ignore other unnecessary files
 
@@ -46,3 +27,5 @@ _.log
 .vscode/
 .idea/
 .husky/
+
+/api
