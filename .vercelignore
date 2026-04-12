@@ -1,9 +1,8 @@
-# Ignore TypeScript source files - only deploy compiled JavaScript
+# Ignore source files - only deploy compiled JavaScript
 
 src/
-api/_.ts
-_.ts
-!\*.d.ts
+api/
+prisma/
 
 # Ignore development and build artifacts
 
@@ -12,7 +11,6 @@ node_modules/
 .gitignore
 .env.local
 .env.\*.local
-dist/
 
 # Ignore documentation and config files
 
