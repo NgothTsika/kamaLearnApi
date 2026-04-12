@@ -1,7 +1,9 @@
 # Ignore TypeScript source files - only deploy compiled JavaScript
 
 src/
-api/\*.ts
+api/_.ts
+_.ts
+!\*.d.ts
 
 # Ignore development and build artifacts
 
