@@ -1,28 +1,21 @@
-# Ignore TypeScript source files
+# Development and documentation files
 
-src/
-api/\*.ts
-
-# Ignore development and build artifacts
-
+node_modules/
 .git/
 .gitignore
 .env.local
-.env.\*.local
-
-# Ignore documentation and config files
-
-\*.md
+.env._.local
+_.md
 .DS_Store
-prisma/seed.ts
-
-# Ignore other unnecessary files
-
+.vscode/
+.idea/
+.husky/
 _.log
 .eslintignore
 .eslintrc_
 .prettierignore
 .prettierrc\*
-.vscode/
-.idea/
-.husky/
+
+# Prisma files not needed for production
+
+prisma/seed.ts
