@@ -1,6 +1,10 @@
+# Ignore TypeScript source files
+
+src/
+api/\*.ts
+
 # Ignore development and build artifacts
 
-node_modules/
 .git/
 .gitignore
 .env.local
