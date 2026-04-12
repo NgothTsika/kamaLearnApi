@@ -2,7 +2,6 @@
   "buildCommand": "yarn generate && yarn build",
   "outputDirectory": "dist",
   "framework": "express",
-  "nodeVersion": "20.11.1",
   "env": {
     "NODE_ENV": "production"
   }
