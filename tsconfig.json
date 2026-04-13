@@ -3,6 +3,7 @@
     "target": "ES2020",
     "module": "commonjs",
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "lib": ["ES2020"],
     "rootDir": "./src",
     "outDir": "./dist/src",
@@ -16,6 +17,5 @@
     "types": ["node"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "ignoreDeprecations": "6.0"
+  "exclude": ["node_modules", "dist"]
 }
