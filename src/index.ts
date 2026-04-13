@@ -4,13 +4,13 @@ import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
-import { env } from "./config/env.js";
-import { apiRouter } from "./routes/index.js";
+import { env } from "./config/env";
+import { apiRouter } from "./routes/index";
 import {
   notFoundHandler,
   errorHandler,
-} from "./middleware/error.middleware.js";
-import { prisma } from "./lib/prisma.js";
+} from "./middleware/error.middleware";
+import { prisma } from "./lib/prisma";
 
 const app: Express = express();
 let server: any;
