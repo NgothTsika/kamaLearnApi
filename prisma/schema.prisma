@@ -37,7 +37,6 @@ model User {
   offlineContent      OfflineContent[]
   collections         Collection[]
   userAchievements    UserAchievement[]
-  pushTokens          PushToken[]
   gameMatchesPlayer1  GameMatch[]          @relation("player1")
   gameMatchesPlayer2  GameMatch[]          @relation("player2")
   gameMatchesWinner   GameMatch[]          @relation("winner")
@@ -45,15 +44,11 @@ model User {
   readingGoal         ReadingGoal?
   dailyActivities     DailyActivity[]
   lessonFeedback      LessonFeedback[]
-  
-  // New relations
-  sessions          Session[]
-  leaderboard       Leaderboard?
-  notifications     Notification[]
-  searchHistory     SearchHistory[]
-  userAnalytics     UserAnalytics?
-  comments          Comment[]
-  auditLogs         AuditLog[]            @relation("adminLogs")
+  notifications       Notification[]
+  searchHistory       SearchHistory[]
+  userAnalytics       UserAnalytics?
+  comments            Comment[]
+  auditLogs           AuditLog[]            @relation("adminLogs")
   // ...existing code...
   followers         UserFollow[]          @relation("following")
   following         UserFollow[]          @relation("follower")
@@ -371,6 +366,7 @@ model Character {
 
   translations CharacterTranslation[]
   collectedBy  CollectedCharacter[]
+  collectionsContaining CharacterCollectionItem[] @relation("CharacterInCollections")
   
   @@index([entityType])
   @@index([personType])
@@ -379,6 +375,33 @@ model Character {
   @@index([traditionType])
   @@index([conceptType])
   @@index([country])
+}
+
+// Admin-managed character collections (e.g., "Great African Leaders", "Female Warriors")
+model CharacterCollection {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items CharacterCollectionItem[]
+
+  @@index([name])
+}
+
+model CharacterCollectionItem {
+  id           String                @id @default(cuid())
+  collectionId String
+  collection   CharacterCollection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  characterId  String
+  character    Character             @relation("CharacterInCollections", fields: [characterId], references: [id], onDelete: Cascade)
+  order        Int                   @default(0)
+  addedAt      DateTime              @default(now())
+
+  @@unique([collectionId, characterId])
+  @@index([collectionId])
+  @@index([characterId])
 }
 
 model CharacterTranslation {
@@ -689,47 +712,6 @@ model DailyActivity {
   goalMet     Boolean?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  @@unique([userId, date])
-}
-
-// ---------- Push Notifications ----------
-model PushToken {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  platform  String // "ios", "android"
-  createdAt DateTime @default(now())
-}
-
-// ---------- Session Management ----------
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  lastUsedAt DateTime?
-
-  @@index([userId])
-}
-
-// ---------- Leaderboards/Rankings ----------
-model Leaderboard {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  totalXp           Int      @default(0)
-  rank              Int?
-  streakRecord      Int      @default(0)
-  lessonsCompleted  Int      @default(0)
-  charactersCollected Int    @default(0)
-  gamesWon          Int      @default(0)
-  updatedAt         DateTime @updatedAt
-
-  @@index([totalXp])
 }
 
 // ---------- Notifications ----------
