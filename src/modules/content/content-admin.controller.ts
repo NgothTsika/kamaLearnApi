@@ -1955,4 +1955,74 @@ contentAdminRouter.patch(
       });
 
       // Add new items
-      if
+      if (body.characterIds.length > 0) {
+        await prisma.characterCollectionItem.createMany({
+          data: body.characterIds.map((characterId, index) => ({
+            collectionId,
+            characterId,
+            order: index,
+          })),
+        });
+      }
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        action: "update_character_collection",
+        entityType: "character_collection",
+        entityId: collectionId,
+        changes: jsonChanges({
+          name: body.name,
+          description: body.description,
+          characterCount: body.characterIds?.length || 0,
+        }),
+      },
+    });
+
+    res.status(200).json({ collection });
+  }),
+);
+
+contentAdminRouter.delete(
+  "/admin/character-collections/:collectionId",
+  requireAuth,
+  adminRoles,
+  asyncHandler(async (req, res) => {
+    const paramsSchema = z.object({ collectionId: z.string().min(1) });
+    const { collectionId } = paramsSchema.parse(req.params);
+
+    // Verify collection exists
+    const existing = await prisma.characterCollection.findUnique({
+      where: { id: collectionId },
+    });
+    if (!existing) {
+      throw new HttpError(404, "Collection not found");
+    }
+
+    // Delete all collection items first (cascade)
+    await prisma.characterCollectionItem.deleteMany({
+      where: { collectionId },
+    });
+
+    // Delete the collection
+    await prisma.characterCollection.delete({
+      where: { id: collectionId },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        action: "delete_character_collection",
+        entityType: "character_collection",
+        entityId: collectionId,
+        changes: jsonChanges({
+          name: existing.name,
+          description: existing.description,
+        }),
+      },
+    });
+
+    res.status(204).send();
+  }),
+);
