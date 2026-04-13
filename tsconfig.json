@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "NodeNext",
+    "module": "CommoJs",
     "lib": ["ES2020"],
     "rootDir": "./src",
     "outDir": "./dist/src",
@@ -14,7 +14,7 @@
     "declarationMap": false,
     "sourceMap": false,
     "types": ["node"],
-    "moduleResolution": "NodeNext"
+    "moduleResolution": "Node"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
