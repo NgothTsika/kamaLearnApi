@@ -1791,7 +1791,16 @@ contentAdminRouter.get(
   requireAuth,
   adminRoles,
   asyncHandler(async (_req, res) => {
-    const collections = await prisma.$queryRaw`
+    const collections = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        characterCount: number;
+      }>
+    >`
       SELECT 
         cc.id,
         cc.name,
@@ -1816,7 +1825,22 @@ contentAdminRouter.get(
     const paramsSchema = z.object({ collectionId: z.string().min(1) });
     const { collectionId } = paramsSchema.parse(req.params);
 
-    const collection = await prisma.$queryRaw`
+    const collection = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        characters: Array<{
+          id: string;
+          name: string;
+          slug: string;
+          imageUrl: string | null;
+          rarityLevel: string | null;
+        }> | null;
+      }>
+    >`
       SELECT 
         cc.id,
         cc.name,
@@ -1943,7 +1967,8 @@ contentAdminRouter.patch(
       where: { id: collectionId },
       data: {
         name: body.name?.trim(),
-        description: body.description === undefined ? undefined : body.description?.trim(),
+        description:
+          body.description === undefined ? undefined : body.description?.trim(),
       },
     });
 
