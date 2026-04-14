@@ -37,6 +37,7 @@ model User {
   offlineContent      OfflineContent[]
   collections         Collection[]
   userAchievements    UserAchievement[]
+  pushTokens          PushToken[]
   gameMatchesPlayer1  GameMatch[]          @relation("player1")
   gameMatchesPlayer2  GameMatch[]          @relation("player2")
   gameMatchesWinner   GameMatch[]          @relation("winner")
@@ -44,11 +45,15 @@ model User {
   readingGoal         ReadingGoal?
   dailyActivities     DailyActivity[]
   lessonFeedback      LessonFeedback[]
-  notifications       Notification[]
-  searchHistory       SearchHistory[]
-  userAnalytics       UserAnalytics?
-  comments            Comment[]
-  auditLogs           AuditLog[]            @relation("adminLogs")
+  
+  // New relations
+  sessions          Session[]
+  leaderboard       Leaderboard?
+  notifications     Notification[]
+  searchHistory     SearchHistory[]
+  userAnalytics     UserAnalytics?
+  comments          Comment[]
+  auditLogs         AuditLog[]            @relation("adminLogs")
   // ...existing code...
   followers         UserFollow[]          @relation("following")
   following         UserFollow[]          @relation("follower")
@@ -712,6 +717,47 @@ model DailyActivity {
   goalMet     Boolean?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+// ---------- Push Notifications ----------
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String // "ios", "android"
+  createdAt DateTime @default(now())
+}
+
+// ---------- Session Management ----------
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+}
+
+// ---------- Leaderboards/Rankings ----------
+model Leaderboard {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalXp           Int      @default(0)
+  rank              Int?
+  streakRecord      Int      @default(0)
+  lessonsCompleted  Int      @default(0)
+  charactersCollected Int    @default(0)
+  gamesWon          Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  @@index([totalXp])
 }
 
 // ---------- Notifications ----------
