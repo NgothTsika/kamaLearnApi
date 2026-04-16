@@ -1797,6 +1797,7 @@ contentAdminRouter.get(
         name: string;
         description: string | null;
         coverImage: string | null;
+        order: number;
         createdAt: Date;
         updatedAt: Date;
         characterCount: number;
@@ -1807,13 +1808,14 @@ contentAdminRouter.get(
         cc.name,
         cc.description,
         cc."coverImage",
+        cc."order",
         cc."createdAt",
         cc."updatedAt",
         COUNT(cci.id)::int as "characterCount"
       FROM "CharacterCollection" cc
       LEFT JOIN "CharacterCollectionItem" cci ON cc.id = cci."collectionId"
       GROUP BY cc.id
-      ORDER BY cc."createdAt" DESC
+      ORDER BY cc."order" ASC, cc."createdAt" DESC
     `;
     res.status(200).json({ collections });
   }),
@@ -1833,6 +1835,7 @@ contentAdminRouter.get(
         name: string;
         description: string | null;
         coverImage: string | null;
+        order: number;
         createdAt: Date;
         updatedAt: Date;
         characters: Array<{
@@ -1849,6 +1852,7 @@ contentAdminRouter.get(
         cc.name,
         cc.description,
         cc."coverImage",
+        cc."order",
         cc."createdAt",
         cc."updatedAt",
         json_agg(
@@ -1884,6 +1888,7 @@ contentAdminRouter.post(
       name: z.string().min(1).max(200),
       description: z.string().max(1000).optional().nullable(),
       coverImage: z.string().max(10000000).optional().nullable(), // Allow base64 data URIs and URLs
+      order: z.number().int().min(0).optional(),
       characterIds: z.array(z.string()).default([]),
     });
     const body = bodySchema.parse(req.body);
@@ -1904,6 +1909,7 @@ contentAdminRouter.post(
         name: body.name.trim(),
         description: body.description?.trim(),
         coverImage: body.coverImage || undefined,
+        order: body.order ?? 0,
       },
     });
 
@@ -1928,6 +1934,7 @@ contentAdminRouter.post(
           name: body.name,
           description: body.description,
           coverImage: body.coverImage || null,
+          order: body.order ?? 0,
           characterCount: body.characterIds.length,
         }),
       },
@@ -1948,6 +1955,7 @@ contentAdminRouter.patch(
       name: z.string().min(1).max(200).optional(),
       description: z.string().max(1000).optional().nullable(),
       coverImage: z.string().max(10000000).optional().nullable(), // Allow base64 data URIs and URLs
+      order: z.number().int().min(0).optional(),
       characterIds: z.array(z.string()).optional(),
     });
     const body = bodySchema.parse(req.body);
@@ -1981,6 +1989,7 @@ contentAdminRouter.patch(
           body.coverImage === undefined
             ? undefined
             : body.coverImage || undefined,
+        order: body.order ?? undefined,
       },
     });
 
@@ -2014,6 +2023,7 @@ contentAdminRouter.patch(
           description: body.description,
           coverImage:
             body.coverImage === undefined ? undefined : body.coverImage || null,
+          order: body.order,
           characterCount: body.characterIds?.length || 0,
         }),
       },
