@@ -1408,7 +1408,7 @@ contentAdminRouter.delete(
 
 // ---------- Characters ----------
 contentAdminRouter.get(
-  "/admin/characters",
+  "/characters",
   requireAuth,
   adminRoles,
   asyncHandler(async (_req, res) => {
@@ -1428,7 +1428,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.get(
-  "/admin/characters/:characterId",
+  "/characters/:characterId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1454,7 +1454,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.post(
-  "/admin/characters",
+  "/characters",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1519,7 +1519,7 @@ contentAdminRouter.post(
 );
 
 contentAdminRouter.patch(
-  "/admin/characters/:characterId",
+  "/characters/:characterId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1610,7 +1610,7 @@ contentAdminRouter.patch(
 );
 
 contentAdminRouter.delete(
-  "/admin/characters/:characterId",
+  "/characters/:characterId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1635,7 +1635,7 @@ contentAdminRouter.delete(
 
 // ---------- Character translations ----------
 contentAdminRouter.get(
-  "/admin/characters/:characterId/translations",
+  "/characters/:characterId/translations",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1652,7 +1652,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.post(
-  "/admin/characters/:characterId/translations",
+  "/characters/:characterId/translations",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1787,7 +1787,7 @@ contentAdminRouter.delete(
 
 // ---------- Character Collections (Admin) ----------
 contentAdminRouter.get(
-  "/admin/character-collections",
+  "/character-collections",
   requireAuth,
   adminRoles,
   asyncHandler(async (_req, res) => {
@@ -1796,6 +1796,7 @@ contentAdminRouter.get(
         id: string;
         name: string;
         description: string | null;
+        coverImage: string | null;
         createdAt: Date;
         updatedAt: Date;
         characterCount: number;
@@ -1805,6 +1806,7 @@ contentAdminRouter.get(
         cc.id,
         cc.name,
         cc.description,
+        cc."coverImage",
         cc."createdAt",
         cc."updatedAt",
         COUNT(cci.id)::int as "characterCount"
@@ -1818,7 +1820,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.get(
-  "/admin/character-collections/:collectionId",
+  "/character-collections/:collectionId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1830,6 +1832,7 @@ contentAdminRouter.get(
         id: string;
         name: string;
         description: string | null;
+        coverImage: string | null;
         createdAt: Date;
         updatedAt: Date;
         characters: Array<{
@@ -1845,6 +1848,7 @@ contentAdminRouter.get(
         cc.id,
         cc.name,
         cc.description,
+        cc."coverImage",
         cc."createdAt",
         cc."updatedAt",
         json_agg(
@@ -1872,13 +1876,14 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.post(
-  "/admin/character-collections",
+  "/character-collections",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
     const bodySchema = z.object({
       name: z.string().min(1).max(200),
       description: z.string().max(1000).optional().nullable(),
+      coverImage: z.string().max(10000000).optional().nullable(), // Allow base64 data URIs and URLs
       characterIds: z.array(z.string()).default([]),
     });
     const body = bodySchema.parse(req.body);
@@ -1898,6 +1903,7 @@ contentAdminRouter.post(
       data: {
         name: body.name.trim(),
         description: body.description?.trim(),
+        coverImage: body.coverImage || undefined,
       },
     });
 
@@ -1921,6 +1927,7 @@ contentAdminRouter.post(
         changes: jsonChanges({
           name: body.name,
           description: body.description,
+          coverImage: body.coverImage || null,
           characterCount: body.characterIds.length,
         }),
       },
@@ -1931,7 +1938,7 @@ contentAdminRouter.post(
 );
 
 contentAdminRouter.patch(
-  "/admin/character-collections/:collectionId",
+  "/character-collections/:collectionId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1940,6 +1947,7 @@ contentAdminRouter.patch(
     const bodySchema = z.object({
       name: z.string().min(1).max(200).optional(),
       description: z.string().max(1000).optional().nullable(),
+      coverImage: z.string().max(10000000).optional().nullable(), // Allow base64 data URIs and URLs
       characterIds: z.array(z.string()).optional(),
     });
     const body = bodySchema.parse(req.body);
@@ -1969,6 +1977,10 @@ contentAdminRouter.patch(
         name: body.name?.trim(),
         description:
           body.description === undefined ? undefined : body.description?.trim(),
+        coverImage:
+          body.coverImage === undefined
+            ? undefined
+            : body.coverImage || undefined,
       },
     });
 
@@ -2000,6 +2012,8 @@ contentAdminRouter.patch(
         changes: jsonChanges({
           name: body.name,
           description: body.description,
+          coverImage:
+            body.coverImage === undefined ? undefined : body.coverImage || null,
           characterCount: body.characterIds?.length || 0,
         }),
       },
@@ -2010,7 +2024,7 @@ contentAdminRouter.patch(
 );
 
 contentAdminRouter.delete(
-  "/admin/character-collections/:collectionId",
+  "/character-collections/:collectionId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
