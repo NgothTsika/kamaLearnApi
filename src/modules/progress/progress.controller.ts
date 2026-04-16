@@ -564,51 +564,87 @@ progressRouter.get(
   "/lessons/in-progress",
   requireAuth,
   asyncHandler(async (req, res) => {
-    const inProgressLessons = await prisma.userProgress.findMany({
+    // First get all user progress records
+    const allProgress = await prisma.userProgress.findMany({
       where: {
         userId: req.user!.id,
-        lesson: {
-          // Only get lessons that haven't been completed
-          completedBy: {
-            none: {
-              userId: req.user!.id,
-            },
-          },
-        },
       },
       orderBy: { updatedAt: "desc" },
-      include: {
-        lesson: {
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            description: true,
-            coverImage: true,
-            xpReward: true,
-          },
-        },
-        chapter: {
-          select: {
-            id: true,
-            title: true,
-            order: true,
-          },
-        },
-      },
     });
 
-    const progress = inProgressLessons.map((p) => ({
-      id: p.id,
-      lessonId: p.lessonId,
-      userId: p.userId,
-      chapterId: p.chapterId,
-      position: p.position,
-      updatedAt: p.updatedAt,
-      lesson: p.lesson,
-      chapter: p.chapter,
-    }));
+    // Filter to only include lessons that exist and haven't been completed
+    const inProgressLessons = await Promise.all(
+      allProgress.map(async (p) => {
+        const [lesson, chapter, isCompleted] = await Promise.all([
+          prisma.lesson.findUnique({
+            where: { id: p.lessonId },
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+              description: true,
+              coverImage: true,
+              xpReward: true,
+            },
+          }),
+          prisma.chapter.findUnique({
+            where: { id: p.chapterId },
+            select: {
+              id: true,
+              title: true,
+              order: true,
+            },
+          }),
+          prisma.completedLesson.findUnique({
+            where: {
+              userId_lessonId: {
+                userId: req.user!.id,
+                lessonId: p.lessonId,
+              },
+            },
+          }),
+        ]);
 
-    res.status(200).json({ progress });
+        // Only include if lesson exists, chapter exists, and lesson is not completed
+        if (lesson && chapter && !isCompleted) {
+          return {
+            id: p.id,
+            lessonId: p.lessonId,
+            userId: p.userId,
+            chapterId: p.chapterId,
+            position: p.position,
+            updatedAt: p.updatedAt,
+            lesson,
+            chapter,
+          };
+        }
+        return null;
+      }),
+    );
+
+    // Filter out null values
+    const validProgress = inProgressLessons.filter((p) => p !== null) as Array<{
+      id: string;
+      lessonId: string;
+      userId: string;
+      chapterId: string;
+      position: number | null;
+      updatedAt: Date;
+      lesson: {
+        id: string;
+        slug: string;
+        title: string;
+        description: string | null;
+        coverImage: string | null;
+        xpReward: number;
+      };
+      chapter: {
+        id: string;
+        title: string;
+        order: number;
+      };
+    }>;
+
+    res.status(200).json({ progress: validProgress });
   }),
 );
