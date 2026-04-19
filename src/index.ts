@@ -4,13 +4,13 @@ import helmet from "helmet";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
-import { env } from "./config/env";
-import { apiRouter } from "./routes/index";
+import { env } from "./config/env.js";
+import { apiRouter } from "./routes/index.js";
 import {
   notFoundHandler,
   errorHandler,
-} from "./middleware/error.middleware";
-import { prisma } from "./lib/prisma";
+} from "./middleware/error.middleware.js";
+import { prisma } from "./lib/prisma.js";
 
 const app: Express = express();
 let server: any;
@@ -97,6 +97,7 @@ app.get("/ready", (_req, res) => {
 });
 
 // API Routes
+// Trigger redeploy to ensure character-collections endpoint is live
 app.use("/", apiRouter);
 
 // 404 Handler
@@ -210,3 +211,4 @@ if (process.env.VERCEL !== "1") {
 // 1. Vercel serverless functions (api/index.ts will wrap this)
 // 2. Other environments where the app is used as middleware
 export default app;
+
