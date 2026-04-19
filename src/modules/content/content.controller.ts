@@ -468,7 +468,19 @@ contentRouter.get(
             category: { select: { id: true, slug: true, name: true } },
           },
         },
-        unlockLesson: { select: { id: true, slug: true } },
+        lessons: {
+          orderBy: { order: "asc" },
+          include: {
+            lesson: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                description: true,
+              },
+            },
+          },
+        },
         translations: language
           ? {
               where: { language },
@@ -516,7 +528,19 @@ contentRouter.get(
             category: { select: { id: true, slug: true, name: true } },
           },
         },
-        unlockLesson: { select: { id: true, slug: true } },
+        lessons: {
+          orderBy: { order: "asc" },
+          include: {
+            lesson: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                description: true,
+              },
+            },
+          },
+        },
         translations: language
           ? {
               where: { language },
