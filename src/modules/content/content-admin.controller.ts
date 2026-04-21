@@ -446,6 +446,7 @@ contentAdminRouter.post(
   asyncHandler(async (req, res) => {
     const bodySchema = z.object({
       title: z.string().min(1).max(300),
+      subtitle: z.string().min(1).max(300).optional().default(""),
       slug: z.string().min(1).max(200).optional(),
       description: z.string().max(10000).optional().nullable(),
       hook: z.string().max(2000).optional().nullable(),
@@ -470,6 +471,7 @@ contentAdminRouter.post(
 
     const createData: any = {
       title: body.title.trim(),
+      subtitle: body.subtitle.trim() || body.title.trim(),
       slug,
       xpReward: body.xpReward ?? 10,
       isPremium: body.isPremium ?? false,
@@ -540,6 +542,7 @@ contentAdminRouter.patch(
     const { lessonId } = paramsSchema.parse(req.params);
     const bodySchema = z.object({
       title: z.string().min(1).max(300).optional(),
+      subtitle: z.string().min(1).max(300).optional(),
       slug: z.string().min(1).max(200).optional(),
       description: z.string().max(10000).optional().nullable(),
       hook: z.string().max(2000).optional().nullable(),
@@ -574,6 +577,7 @@ contentAdminRouter.patch(
       where: { id: lessonId },
       data: {
         title: body.title?.trim() ?? undefined,
+        subtitle: body.subtitle?.trim() ?? undefined,
         slug: slug ?? undefined,
         description:
           body.description === undefined ? undefined : body.description,
