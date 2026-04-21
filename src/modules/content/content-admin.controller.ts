@@ -1,7 +1,3 @@
-
-
-
-
 import { Router } from "express";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
@@ -452,7 +448,6 @@ contentAdminRouter.post(
       title: z.string().min(1).max(300),
       slug: z.string().min(1).max(200).optional(),
       description: z.string().max(10000).optional().nullable(),
-      content: z.string().default(""),
       hook: z.string().max(2000).optional().nullable(),
       coverImage: z.string().url().optional().nullable().or(z.literal("")),
       xpReward: z.number().int().min(0).optional(),
@@ -473,26 +468,53 @@ contentAdminRouter.post(
     const clash = await prisma.lesson.findUnique({ where: { slug } });
     if (clash) throw new HttpError(409, "Slug already in use");
 
+    const createData: any = {
+      title: body.title.trim(),
+      slug,
+      xpReward: body.xpReward ?? 10,
+      isPremium: body.isPremium ?? false,
+      published: body.published ?? false,
+      order: body.order ?? 0,
+    };
+
+    // Only include optional fields if they are provided and not null
+    if (body.description !== undefined && body.description !== null) {
+      createData.description = body.description;
+    }
+    if (body.hook !== undefined && body.hook !== null) {
+      createData.hook = body.hook;
+    }
+    if (
+      body.coverImage !== undefined &&
+      body.coverImage !== null &&
+      body.coverImage !== ""
+    ) {
+      createData.coverImage = body.coverImage;
+    }
+    if (body.categoryId !== undefined && body.categoryId !== null) {
+      createData.categoryId = body.categoryId;
+    }
+    if (body.topicId !== undefined && body.topicId !== null) {
+      createData.topicId = body.topicId;
+    }
+    if (body.deepDiveContent !== undefined && body.deepDiveContent !== null) {
+      createData.deepDiveContent = body.deepDiveContent;
+    }
+    if (body.titleAudioUrl !== undefined && body.titleAudioUrl !== null) {
+      createData.titleAudioUrl = body.titleAudioUrl;
+    }
+    if (body.hookAudioUrl !== undefined && body.hookAudioUrl !== null) {
+      createData.hookAudioUrl = body.hookAudioUrl;
+    }
+    if (body.contentAudioUrl !== undefined && body.contentAudioUrl !== null) {
+      createData.contentAudioUrl = body.contentAudioUrl;
+    }
+    if (body.deepDiveAudioUrl !== undefined && body.deepDiveAudioUrl !== null) {
+      createData.deepDiveAudioUrl = body.deepDiveAudioUrl;
+    }
+
     const lesson = await prisma.lesson.create({
-      data: {
-        title: body.title.trim(),
-        slug,
-        description: body.description ?? undefined,
-        content: body.content,
-        hook: body.hook ?? undefined,
-        coverImage: body.coverImage || undefined,
-        xpReward: body.xpReward ?? 10,
-        isPremium: body.isPremium ?? false,
-        published: body.published ?? false,
-        order: body.order ?? 0,
-        categoryId: body.categoryId ?? undefined,
-        topicId: body.topicId ?? undefined,
-        deepDiveContent: body.deepDiveContent ?? undefined,
-        titleAudioUrl: body.titleAudioUrl ?? undefined, // NEW
-        hookAudioUrl: body.hookAudioUrl ?? undefined, // NEW
-        contentAudioUrl: body.contentAudioUrl ?? undefined, // NEW
-        deepDiveAudioUrl: body.deepDiveAudioUrl ?? undefined, // NEW
-      },
+      data: createData,
     });
 
     await prisma.auditLog.create({
@@ -520,7 +542,6 @@ contentAdminRouter.patch(
       title: z.string().min(1).max(300).optional(),
       slug: z.string().min(1).max(200).optional(),
       description: z.string().max(10000).optional().nullable(),
-      content: z.string().optional(),
       hook: z.string().max(2000).optional().nullable(),
       coverImage: z.string().url().optional().nullable().or(z.literal("")),
       xpReward: z.number().int().min(0).optional(),
@@ -556,7 +577,6 @@ contentAdminRouter.patch(
         slug: slug ?? undefined,
         description:
           body.description === undefined ? undefined : body.description,
-        content: body.content ?? undefined,
         hook: body.hook === undefined ? undefined : body.hook,
         coverImage:
           body.coverImage === undefined ? undefined : body.coverImage || null,
@@ -655,11 +675,12 @@ contentAdminRouter.post(
     const { lessonId } = paramsSchema.parse(req.params);
     const bodySchema = z.object({
       title: z.string().min(1).max(300),
-      content: z.string().min(1),
       coverImage: z.string().url().optional().nullable().or(z.literal("")),
       mediaType: z.string().max(50).optional().nullable(),
       mediaUrl: z.string().url().optional().nullable().or(z.literal("")),
       feedbackQuestion: z.string().max(2000).optional().nullable(),
+      introText: z.string().max(5000).optional().nullable(),
+      introAudioUrl: z.string().url().optional().nullable(),
       order: z.number().int().optional(),
     });
     const body = bodySchema.parse(req.body);
@@ -675,6 +696,8 @@ contentAdminRouter.post(
         mediaType: body.mediaType ?? undefined,
         mediaUrl: body.mediaUrl || undefined,
         feedbackQuestion: body.feedbackQuestion ?? undefined,
+        introText: body.introText ?? undefined,
+        introAudioUrl: body.introAudioUrl ?? undefined,
         order: body.order ?? 0,
       },
     });
@@ -702,11 +725,12 @@ contentAdminRouter.patch(
     const { chapterId } = paramsSchema.parse(req.params);
     const bodySchema = z.object({
       title: z.string().min(1).max(300).optional(),
-      content: z.string().min(1).optional(),
       coverImage: z.string().url().optional().nullable().or(z.literal("")),
       mediaType: z.string().max(50).optional().nullable(),
       mediaUrl: z.string().url().optional().nullable().or(z.literal("")),
       feedbackQuestion: z.string().max(2000).optional().nullable(),
+      introText: z.string().max(5000).optional().nullable(),
+      introAudioUrl: z.string().url().optional().nullable(),
       order: z.number().int().optional(),
     });
     const body = bodySchema.parse(req.body);
@@ -724,6 +748,9 @@ contentAdminRouter.patch(
           body.feedbackQuestion === undefined
             ? undefined
             : body.feedbackQuestion,
+        introText: body.introText === undefined ? undefined : body.introText,
+        introAudioUrl:
+          body.introAudioUrl === undefined ? undefined : body.introAudioUrl,
         order: body.order ?? undefined,
       },
     });
@@ -1516,7 +1543,6 @@ contentAdminRouter.post(
         language: body.language,
         title: body.title,
         description: body.description ?? undefined,
-        content: body.content,
         hook: body.hook ?? undefined,
         deepDiveContent: body.deepDiveContent ?? undefined,
       },
@@ -1583,7 +1609,6 @@ contentAdminRouter.patch(
         title: body.title ?? undefined,
         description:
           body.description === undefined ? undefined : body.description,
-        content: body.content ?? undefined,
         hook: body.hook === undefined ? undefined : body.hook,
         deepDiveContent:
           body.deepDiveContent === undefined ? undefined : body.deepDiveContent,
