@@ -214,6 +214,7 @@ contentRouter.get(
           orderBy: { order: "asc" },
           select: {
             id: true,
+            chapterId: true,
             question: true,
             options: true,
             explanation: true,
@@ -321,6 +322,7 @@ contentRouter.get(
             orderBy: { order: "asc" },
             select: {
               id: true,
+              chapterId: true,
               question: true,
               options: true,
               explanation: true,
@@ -409,6 +411,7 @@ contentRouter.get(
           orderBy: { order: "asc" },
           select: {
             id: true,
+            chapterId: true,
             question: true,
             options: true,
             explanation: true,
@@ -757,6 +760,10 @@ contentRouter.get(
           orderBy: { order: "asc" },
           include: {
             steps: { orderBy: { order: "asc" } },
+            quizzes: {
+              where: { isActive: true },
+              orderBy: { order: "asc" },
+            },
           },
         },
       },
@@ -779,6 +786,27 @@ contentRouter.get(
       where: { id: chapterId },
       include: {
         steps: { orderBy: { order: "asc" } },
+        quizzes: {
+          where: { isActive: true },
+          orderBy: { order: "asc" },
+          select: {
+            id: true,
+            chapterId: true,
+            question: true,
+            options: true,
+            explanation: true,
+            heartLimit: true,
+            timeLimitSeconds: true,
+            difficulty: true,
+            tags: true,
+            topicId: true,
+            questionAudioUrl: true,
+            isPoll: true,
+            pollDescription: true,
+            pollResults: true,
+            totalPollVotes: true,
+          },
+        },
       },
     });
 
