@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../lib/http";
 import { requireAuth } from "../../middleware/auth.middleware";
@@ -18,8 +18,7 @@ async function hasTableColumn(tableName: string, columnName: string) {
   const cached = tableColumnPromiseCache.get(key);
   if (cached) return cached;
 
-  const promise = prisma
-    .$queryRaw<Array<{ exists: boolean }>>`
+  const promise = prisma.$queryRaw<Array<{ exists: boolean }>>`
       SELECT EXISTS (
         SELECT 1
         FROM information_schema.columns
@@ -37,8 +36,7 @@ async function hasTableColumn(tableName: string, columnName: string) {
 
 async function hasQuizChapterIdColumn() {
   if (!quizChapterIdColumnPromise) {
-    quizChapterIdColumnPromise = prisma
-      .$queryRaw<Array<{ exists: boolean }>>`
+    quizChapterIdColumnPromise = prisma.$queryRaw<Array<{ exists: boolean }>>`
         SELECT EXISTS (
           SELECT 1
           FROM information_schema.columns
@@ -87,6 +85,42 @@ function getAdminQuizSelect(includeChapterId: boolean): Prisma.QuizSelect {
 
 function jsonChanges(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
+const adminQuizTypeSchema = z.enum([
+  "true_false",
+  "multiple_choice",
+  "image_choice",
+  "poll",
+]);
+
+type AdminQuizType = z.infer<typeof adminQuizTypeSchema>;
+
+function inferAdminQuizType(input: {
+  type?: AdminQuizType;
+  isPoll?: boolean;
+  options?: string[];
+  optionImages?: string[] | null;
+}): AdminQuizType {
+  if (input.isPoll || input.type === "poll") return "poll";
+  if (input.type) return input.type;
+  if (
+    Array.isArray(input.optionImages) &&
+    input.optionImages.some((image) => image.trim().length > 0)
+  ) {
+    return "image_choice";
+  }
+
+  const [first, second] = input.options ?? [];
+  if (
+    input.options?.length === 2 &&
+    first?.trim().toLowerCase() === "true" &&
+    second?.trim().toLowerCase() === "false"
+  ) {
+    return "true_false";
+  }
+
+  return "multiple_choice";
 }
 
 function slugify(input: string): string {
@@ -546,7 +580,9 @@ contentAdminRouter.get(
           ...(hasChapterIntroAudioUrl ? { introAudioUrl: true } : {}),
         },
       },
-      translations: { orderBy: [{ language: "asc" as const }, { createdAt: "desc" as const }] },
+      translations: {
+        orderBy: [{ language: "asc" as const }, { createdAt: "desc" as const }],
+      },
     } satisfies Prisma.LessonSelect;
 
     const lesson = await prisma.lesson.findUnique({
@@ -564,19 +600,29 @@ contentAdminRouter.get(
       lesson: {
         ...lesson,
         deepDiveContent: hasLessonDeepDiveContent
-          ? ("deepDiveContent" in lesson ? lesson.deepDiveContent ?? null : null)
+          ? "deepDiveContent" in lesson
+            ? (lesson.deepDiveContent ?? null)
+            : null
           : null,
         titleAudioUrl: hasLessonTitleAudioUrl
-          ? ("titleAudioUrl" in lesson ? lesson.titleAudioUrl ?? null : null)
+          ? "titleAudioUrl" in lesson
+            ? (lesson.titleAudioUrl ?? null)
+            : null
           : null,
         hookAudioUrl: hasLessonHookAudioUrl
-          ? ("hookAudioUrl" in lesson ? lesson.hookAudioUrl ?? null : null)
+          ? "hookAudioUrl" in lesson
+            ? (lesson.hookAudioUrl ?? null)
+            : null
           : null,
         contentAudioUrl: hasLessonContentAudioUrl
-          ? ("contentAudioUrl" in lesson ? lesson.contentAudioUrl ?? null : null)
+          ? "contentAudioUrl" in lesson
+            ? (lesson.contentAudioUrl ?? null)
+            : null
           : null,
         deepDiveAudioUrl: hasLessonDeepDiveAudioUrl
-          ? ("deepDiveAudioUrl" in lesson ? lesson.deepDiveAudioUrl ?? null : null)
+          ? "deepDiveAudioUrl" in lesson
+            ? (lesson.deepDiveAudioUrl ?? null)
+            : null
           : null,
         relatedCharacters: [],
         chapters: lesson.chapters.map((chapter) => ({
@@ -584,16 +630,16 @@ contentAdminRouter.get(
           content: "",
           introText:
             hasChapterIntroText && "introText" in chapter
-              ? chapter.introText ?? null
+              ? (chapter.introText ?? null)
               : null,
           introAudioUrl:
             hasChapterIntroAudioUrl && "introAudioUrl" in chapter
-              ? chapter.introAudioUrl ?? null
+              ? (chapter.introAudioUrl ?? null)
               : null,
         })),
         quizzes: quizzes.map((quiz) => ({
           ...quiz,
-          chapterId: quizChapterIdEnabled ? quiz.chapterId ?? null : null,
+          chapterId: quizChapterIdEnabled ? (quiz.chapterId ?? null) : null,
         })),
       },
     });
@@ -1160,7 +1206,9 @@ contentAdminRouter.post(
     const bodySchema = z.object({
       question: z.string().min(1),
       chapterId: z.string().min(1).optional().nullable(),
+      type: adminQuizTypeSchema.optional(),
       options: z.array(z.string()).min(2),
+      optionImages: z.array(z.string()).optional().nullable(),
       correctOption: z.number().int().min(0).optional().nullable(),
       explanation: z.string().optional().nullable(),
       order: z.number().int().optional(),
@@ -1176,11 +1224,22 @@ contentAdminRouter.post(
     });
     const body = bodySchema.parse(req.body);
     const quizChapterIdEnabled = await hasQuizChapterIdColumn();
-    const requestedChapterId = quizChapterIdEnabled ? (body.chapterId ?? null) : null;
+    const requestedChapterId = quizChapterIdEnabled
+      ? (body.chapterId ?? null)
+      : null;
+    const isPoll = body.isPoll ?? body.type === "poll";
+    const quizType = inferAdminQuizType({
+      type: body.type,
+      isPoll,
+      options: body.options,
+      optionImages: body.optionImages ?? null,
+    });
+    const optionImages =
+      body.optionImages?.map((image) => image.trim()).filter(Boolean) ?? null;
 
     // Validate poll questions should not have correctOption
     if (
-      body.isPoll &&
+      isPoll &&
       body.correctOption !== null &&
       body.correctOption !== undefined
     ) {
@@ -1192,7 +1251,7 @@ contentAdminRouter.post(
 
     // Validate regular quizzes must have correctOption
     if (
-      !body.isPoll &&
+      !isPoll &&
       (body.correctOption === null || body.correctOption === undefined)
     ) {
       throw new HttpError(
@@ -1218,7 +1277,10 @@ contentAdminRouter.post(
         select: { id: true },
       });
       if (!chapter) {
-        throw new HttpError(400, "Selected chapter does not belong to this lesson");
+        throw new HttpError(
+          400,
+          "Selected chapter does not belong to this lesson",
+        );
       }
     }
 
@@ -1227,18 +1289,20 @@ contentAdminRouter.post(
         lessonId,
         ...(quizChapterIdEnabled ? { chapterId: requestedChapterId } : {}),
         question: body.question.trim(),
+        type: quizType,
         options: body.options,
-        correctOption: body.isPoll ? null : body.correctOption,
-        explanation: body.isPoll ? null : (body.explanation ?? undefined),
+        optionImages: optionImages === null ? Prisma.JsonNull : optionImages,
+        correctOption: isPoll ? null : body.correctOption,
+        explanation: isPoll ? null : (body.explanation ?? undefined),
         order: body.order ?? 0,
-        heartLimit: body.isPoll ? undefined : (body.heartLimit ?? 4),
+        heartLimit: isPoll ? undefined : (body.heartLimit ?? 4),
         timeLimitSeconds: body.timeLimitSeconds ?? undefined,
-        difficulty: body.isPoll ? null : (body.difficulty ?? undefined),
+        difficulty: isPoll ? null : (body.difficulty ?? undefined),
         isActive: body.isActive ?? true,
         tags: body.tags ?? [],
         topicId: body.topicId ?? undefined,
         questionAudioUrl: body.questionAudioUrl ?? undefined, // NEW
-        isPoll: body.isPoll ?? false, // NEW
+        isPoll, // NEW
         pollDescription: body.pollDescription ?? undefined, // NEW
       },
     });
@@ -1249,7 +1313,13 @@ contentAdminRouter.post(
         action: "create_quiz",
         entityType: "quiz",
         entityId: quiz.id,
-        changes: { lessonId, question: quiz.question, isPoll: body.isPoll },
+        changes: jsonChanges({
+          lessonId,
+          chapterId: requestedChapterId,
+          question: quiz.question,
+          type: quiz.type,
+          isPoll,
+        }),
       },
     });
 
@@ -1314,7 +1384,7 @@ contentAdminRouter.get(
     const transformedQuizzes = quizzes.map((quiz) => ({
       id: quiz.id,
       lessonId: quiz.lessonId,
-      chapterId: quizChapterIdEnabled ? quiz.chapterId ?? null : null,
+      chapterId: quizChapterIdEnabled ? (quiz.chapterId ?? null) : null,
       question: quiz.question,
       type: quiz.type,
       options: safeJsonArray(quiz.options),
@@ -1354,7 +1424,9 @@ contentAdminRouter.patch(
     const bodySchema = z.object({
       question: z.string().min(1).optional(),
       chapterId: z.string().min(1).optional().nullable(),
+      type: adminQuizTypeSchema.optional(),
       options: z.array(z.string()).min(2).optional(),
+      optionImages: z.array(z.string()).optional().nullable(),
       correctOption: z.number().int().min(0).optional().nullable(),
       explanation: z.string().optional().nullable(),
       order: z.number().int().optional(),
@@ -1384,13 +1456,38 @@ contentAdminRouter.patch(
         select: { id: true },
       });
       if (!chapter) {
-        throw new HttpError(400, "Selected chapter does not belong to this lesson");
+        throw new HttpError(
+          400,
+          "Selected chapter does not belong to this lesson",
+        );
       }
     }
 
     const options = body.options ?? (existing.options as unknown as string[]);
-    const correctOption = body.correctOption ?? existing.correctOption;
-    const isPoll = body.isPoll ?? existing.isPoll;
+    const isPoll =
+      body.isPoll ?? (body.type === "poll" ? true : existing.isPoll);
+    const isSwitchingToPoll =
+      isPoll && (body.isPoll !== undefined || body.type === "poll");
+    const correctOption =
+      body.correctOption !== undefined
+        ? body.correctOption
+        : isSwitchingToPoll
+          ? null
+          : existing.correctOption;
+    const quizType = inferAdminQuizType({
+      type: body.type,
+      isPoll,
+      options,
+      optionImages:
+        body.optionImages === undefined
+          ? ((existing.optionImages as unknown as string[] | null) ?? null)
+          : body.optionImages,
+    });
+    const optionImages =
+      body.optionImages === undefined
+        ? undefined
+        : (body.optionImages?.map((image) => image.trim()).filter(Boolean) ??
+          null);
 
     // Validate poll questions should not have correctOption
     if (isPoll && correctOption !== null && correctOption !== undefined) {
@@ -1423,7 +1520,17 @@ contentAdminRouter.patch(
         ...(quizChapterIdEnabled && requestedChapterId !== undefined
           ? { chapterId: requestedChapterId }
           : {}),
+        type:
+          body.type === undefined && body.isPoll === undefined
+            ? undefined
+            : quizType,
         options: body.options ?? undefined,
+        optionImages:
+          optionImages === undefined
+            ? undefined
+            : optionImages === null
+              ? Prisma.JsonNull
+              : optionImages,
         correctOption: isPoll ? null : (body.correctOption ?? undefined),
         explanation: isPoll
           ? null
