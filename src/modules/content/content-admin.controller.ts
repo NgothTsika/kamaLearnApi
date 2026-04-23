@@ -998,6 +998,7 @@ contentAdminRouter.post(
     const { lessonId } = paramsSchema.parse(req.params);
     const bodySchema = z.object({
       question: z.string().min(1),
+      chapterId: z.string().min(1).optional().nullable(),
       options: z.array(z.string()).min(2),
       correctOption: z.number().int().min(0).optional().nullable(),
       explanation: z.string().optional().nullable(),
@@ -1048,9 +1049,20 @@ contentAdminRouter.post(
     const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
     if (!lesson) throw new HttpError(404, "Lesson not found");
 
+    if (body.chapterId) {
+      const chapter = await prisma.chapter.findFirst({
+        where: { id: body.chapterId, lessonId },
+        select: { id: true },
+      });
+      if (!chapter) {
+        throw new HttpError(400, "Selected chapter does not belong to this lesson");
+      }
+    }
+
     const quiz = await prisma.quiz.create({
       data: {
         lessonId,
+        chapterId: body.chapterId ?? null,
         question: body.question.trim(),
         options: body.options,
         correctOption: body.isPoll ? null : body.correctOption,
@@ -1137,6 +1149,7 @@ contentAdminRouter.get(
     const transformedQuizzes = quizzes.map((quiz) => ({
       id: quiz.id,
       lessonId: quiz.lessonId,
+      chapterId: "chapterId" in quiz ? (quiz.chapterId ?? null) : null,
       question: quiz.question,
       type: quiz.type,
       options: safeJsonArray(quiz.options),
@@ -1174,6 +1187,7 @@ contentAdminRouter.patch(
     const { quizId } = paramsSchema.parse(req.params);
     const bodySchema = z.object({
       question: z.string().min(1).optional(),
+      chapterId: z.string().min(1).optional().nullable(),
       options: z.array(z.string()).min(2).optional(),
       correctOption: z.number().int().min(0).optional().nullable(),
       explanation: z.string().optional().nullable(),
@@ -1192,6 +1206,16 @@ contentAdminRouter.patch(
 
     const existing = await prisma.quiz.findUnique({ where: { id: quizId } });
     if (!existing) throw new HttpError(404, "Quiz not found");
+
+    if (body.chapterId) {
+      const chapter = await prisma.chapter.findFirst({
+        where: { id: body.chapterId, lessonId: existing.lessonId },
+        select: { id: true },
+      });
+      if (!chapter) {
+        throw new HttpError(400, "Selected chapter does not belong to this lesson");
+      }
+    }
 
     const options = body.options ?? (existing.options as unknown as string[]);
     const correctOption = body.correctOption ?? existing.correctOption;
@@ -1225,6 +1249,7 @@ contentAdminRouter.patch(
       where: { id: quizId },
       data: {
         question: body.question?.trim() ?? undefined,
+        chapterId: body.chapterId === undefined ? undefined : body.chapterId,
         options: body.options ?? undefined,
         correctOption: isPoll ? null : (body.correctOption ?? undefined),
         explanation: isPoll
