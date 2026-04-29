@@ -763,7 +763,7 @@ contentRouter.get(
         id: collection.id,
         title: collection.title,
         description: collection.description,
-        coverImage: null,
+        coverImage: collection.items[0]?.lesson.coverImage ?? null,
         itemCount: collection.items.length,
         createdAt: collection.createdAt,
         updatedAt: collection.updatedAt,
@@ -809,12 +809,84 @@ contentRouter.get(
         id: collection.id,
         title: collection.title,
         description: collection.description,
-        coverImage: null,
+        coverImage: collection.items[0]?.lesson.coverImage ?? null,
         itemCount: collection.items.length,
         createdAt: collection.createdAt,
         updatedAt: collection.updatedAt,
         lessons: collection.items.map((item) => item.lesson),
       },
+    });
+  }),
+);
+
+contentRouter.get(
+  "/roadmap",
+  asyncHandler(async (req, res) => {
+    const language =
+      typeof req.query.language === "string" ? req.query.language : undefined;
+
+    const levels = await prisma.roadmapLevel.findMany({
+      where: { isPublished: true },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+      include: {
+        lessons: {
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          include: {
+            lesson: {
+              select: {
+                id: true,
+                slug: true,
+                title: true,
+                description: true,
+                hook: true,
+                coverImage: true,
+                xpReward: true,
+                isPremium: true,
+                translations: language
+                  ? {
+                      where: { language },
+                      take: 1,
+                      select: {
+                        title: true,
+                        description: true,
+                        hook: true,
+                      },
+                    }
+                  : false,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      levels: levels.map((level) => ({
+        id: level.id,
+        title: level.title,
+        description: level.description,
+        symbol: level.symbol,
+        color: level.color,
+        order: level.order,
+        lessons: level.lessons.map((item) => {
+          const translation =
+            Array.isArray(item.lesson.translations) &&
+            item.lesson.translations.length > 0
+              ? item.lesson.translations[0]
+              : null;
+          return {
+            id: item.lesson.id,
+            slug: item.lesson.slug,
+            title: translation?.title ?? item.lesson.title,
+            description: translation?.description ?? item.lesson.description,
+            hook: translation?.hook ?? item.lesson.hook,
+            coverImage: item.lesson.coverImage,
+            xpReward: item.lesson.xpReward,
+            isPremium: item.lesson.isPremium,
+            order: item.order,
+          };
+        }),
+      })),
     });
   }),
 );
