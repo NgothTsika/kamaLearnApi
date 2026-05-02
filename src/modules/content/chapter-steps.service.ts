@@ -1,5 +1,3 @@
-Chapter step 
-
 import { prisma } from "../../lib/prisma";
 import type { ChapterStep } from "@prisma/client";
 
@@ -171,3 +169,4 @@ export async function getUserStepResponse(userId: string, stepId: string) {
     },
   });
 }
+
