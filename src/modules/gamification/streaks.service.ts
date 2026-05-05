@@ -1,4 +1,4 @@
- import { prisma } from "../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { HttpError } from "../../lib/errors";
 import {
   isCurrentDayStreak,
@@ -311,4 +311,3 @@ export async function getStreakStatistics(userId: string) {
     streakStartedAt: userStreak.streakStartedAt,
   };
 }
-Barika
